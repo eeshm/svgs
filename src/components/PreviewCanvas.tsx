@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { motion, useAnimate } from "motion/react";
+import type { AnimationControlsState, PresetKey, ScopeMode, SvgNode } from "../types";
 
 const SHAPE_TAGS = new Set(["path", "rect", "circle", "ellipse", "line", "polygon", "polyline"]);
 
-const TAG_MAP = {
+const TAG_MAP: Record<string, any> = {
   svg: motion.svg,
   g: motion.g,
   path: motion.path,
@@ -15,18 +16,28 @@ const TAG_MAP = {
   polyline: motion.polyline,
 };
 
-function toReactPropName(name) {
-  if (name === "class") return "className";
-  if (name.startsWith("data-") || name.startsWith("aria-")) return name;
-  return name.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
+interface PreviewCanvasProps {
+  svgTree: SvgNode | null;
+  preset: PresetKey;
+  controls: AnimationControlsState;
+  selectedLayerId: string | null;
+  scope: ScopeMode;
+  replayToken: number;
+  onReplay: () => void;
 }
 
-function parseStyle(styleValue) {
+function toReactPropName(name: string) {
+  if (name === "class") return "className";
+  if (name.startsWith("data-") || name.startsWith("aria-")) return name;
+  return name.replace(/-([a-z])/g, (_, char: string) => char.toUpperCase());
+}
+
+function parseStyle(styleValue: string) {
   return styleValue
     .split(";")
     .map((entry) => entry.trim())
     .filter(Boolean)
-    .reduce((acc, pair) => {
+    .reduce<Record<string, string>>((acc, pair) => {
       const [rawKey, rawValue] = pair.split(":");
       if (!rawKey || !rawValue) return acc;
       acc[toReactPropName(rawKey.trim())] = rawValue.trim();
@@ -34,8 +45,8 @@ function parseStyle(styleValue) {
     }, {});
 }
 
-function attrsToProps(attrs) {
-  return Object.entries(attrs).reduce((acc, [key, value]) => {
+function attrsToProps(attrs: Record<string, string>) {
+  return Object.entries(attrs).reduce<Record<string, unknown>>((acc, [key, value]) => {
     if (key === "style") {
       acc.style = parseStyle(value);
       return acc;
@@ -45,7 +56,7 @@ function attrsToProps(attrs) {
   }, {});
 }
 
-function getTransition(preset, controls) {
+function getTransition(preset: PresetKey, controls: AnimationControlsState) {
   const spring = {
     type: "spring",
     stiffness: controls.stiffness,
@@ -65,7 +76,7 @@ function getTransition(preset, controls) {
   };
 }
 
-function getNodeVariants(preset, tag, controls) {
+function getNodeVariants(preset: PresetKey, tag: string, controls: AnimationControlsState) {
   const transition = getTransition(preset, controls);
 
   if (preset === "fade") {
@@ -138,7 +149,7 @@ function getNodeVariants(preset, tag, controls) {
   };
 }
 
-function getContainerVariants(controls) {
+function getContainerVariants(controls: AnimationControlsState) {
   return {
     hidden: {},
     visible: {
@@ -150,7 +161,7 @@ function getContainerVariants(controls) {
   };
 }
 
-function getReplayHidden(preset) {
+function getReplayHidden(preset: PresetKey) {
   if (preset === "fade") return { opacity: 0 };
   if (preset === "slide") return { opacity: 0, x: -24, y: 8 };
   if (preset === "draw") return { opacity: 0 };
@@ -167,7 +178,7 @@ function PreviewCanvas({
   scope,
   replayToken,
   onReplay,
-}) {
+}: PreviewCanvasProps) {
   const [scopeRef, animate] = useAnimate();
   const [renderCycle, setRenderCycle] = useState(0);
 
@@ -188,7 +199,7 @@ function PreviewCanvas({
     });
   }, [animate, controls, effectiveScope, preset, replayToken, selectedLayerId, svgTree]);
 
-  const renderNode = (node, parentInSelectedScope = false) => {
+  const renderNode = (node: SvgNode, parentInSelectedScope = false): ReactElement => {
     const MotionTag = TAG_MAP[node.tag] || motion.g;
     const props = attrsToProps(node.attrs || {});
     const isSelectedRoot = node.id === selectedLayerId;

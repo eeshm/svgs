@@ -1,9 +1,18 @@
 import { useMemo, useState } from "react";
+import type { AnimationControlsState, PresetKey, ScopeMode } from "../types";
+
+interface ExportPanelProps {
+  hasSvg: boolean;
+  svgText: string;
+  preset: PresetKey;
+  controls: AnimationControlsState;
+  scope: ScopeMode;
+}
 
 function useCopyFeedback() {
   const [copied, setCopied] = useState("");
 
-  const copyText = async (id, text) => {
+  const copyText = async (id: string, text: string) => {
     await navigator.clipboard.writeText(text);
     setCopied(id);
     window.setTimeout(() => setCopied(""), 1400);
@@ -12,7 +21,17 @@ function useCopyFeedback() {
   return { copied, copyText };
 }
 
-function buildReactSnippet({ svgText, preset, controls, scope }) {
+function buildReactSnippet({
+  svgText,
+  preset,
+  controls,
+  scope,
+}: {
+  svgText: string;
+  preset: PresetKey;
+  controls: AnimationControlsState;
+  scope: ScopeMode;
+}) {
   const escaped = svgText
     .replace(/`/g, "\\`")
     .replace(/\$\{/g, "\\${")
@@ -35,11 +54,17 @@ export default function AnimatedLogo() {
 `;
 }
 
-function buildCssFallbackSnippet({ preset, controls }) {
+function buildCssFallbackSnippet({
+  preset,
+  controls,
+}: {
+  preset: PresetKey;
+  controls: AnimationControlsState;
+}) {
   const duration = Number(controls.duration || 0.8).toFixed(2);
   const delay = Number(controls.delay || 0).toFixed(2);
 
-  const keyframes = {
+  const keyframes: Record<PresetKey, string> = {
     fade: "from { opacity: 0; } to { opacity: 1; }",
     slide: "from { opacity: 0; transform: translate(-24px, 8px); } to { opacity: 1; transform: translate(0, 0); }",
     draw: "from { opacity: 0; stroke-dashoffset: 1000; } to { opacity: 1; stroke-dashoffset: 0; }",
@@ -54,12 +79,20 @@ svg [data-anim-target="true"] {
 }
 
 @keyframes svg-${preset} {
-  ${keyframes[preset] || keyframes.fade}
+  ${keyframes[preset]}
 }
 `;
 }
 
-function buildVanillaMotionSnippet({ preset, controls, scope }) {
+function buildVanillaMotionSnippet({
+  preset,
+  controls,
+  scope,
+}: {
+  preset: PresetKey;
+  controls: AnimationControlsState;
+  scope: ScopeMode;
+}) {
   return `import { animate, stagger } from "motion";
 
 const preset = "${preset}";
@@ -88,7 +121,16 @@ if (preset === "stagger") {
 `;
 }
 
-function ExportBox({ title, id, code, copied, onCopy, disabled }) {
+interface ExportBoxProps {
+  title: string;
+  id: string;
+  code: string;
+  copied: string;
+  onCopy: (id: string, code: string) => void;
+  disabled: boolean;
+}
+
+function ExportBox({ title, id, code, copied, onCopy, disabled }: ExportBoxProps) {
   return (
     <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
       <div className="mb-2 flex items-center justify-between">
@@ -109,7 +151,7 @@ function ExportBox({ title, id, code, copied, onCopy, disabled }) {
   );
 }
 
-function ExportPanel({ hasSvg, svgText, preset, controls, scope }) {
+function ExportPanel({ hasSvg, svgText, preset, controls, scope }: ExportPanelProps) {
   const { copied, copyText } = useCopyFeedback();
 
   const snippets = useMemo(() => {

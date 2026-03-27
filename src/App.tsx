@@ -4,8 +4,17 @@ import LayerPanel from "./components/LayerPanel";
 import PreviewCanvas from "./components/PreviewCanvas";
 import AnimationControls from "./components/AnimationControls";
 import ExportPanel from "./components/ExportPanel";
+import type {
+  AllowedTag,
+  AnimationControlsState,
+  LayerItem,
+  PresetKey,
+  ScopeMode,
+  SvgNode,
+  UploadPayload,
+} from "./types";
 
-const ALLOWED_TAGS = new Set([
+const ALLOWED_TAGS = new Set<AllowedTag>([
   "svg",
   "g",
   "path",
@@ -17,7 +26,7 @@ const ALLOWED_TAGS = new Set([
   "polyline",
 ]);
 
-const INITIAL_CONTROLS = {
+const INITIAL_CONTROLS: AnimationControlsState = {
   duration: 0.8,
   delay: 0,
   stiffness: 220,
@@ -25,14 +34,14 @@ const INITIAL_CONTROLS = {
   mass: 1,
 };
 
-function attrsToObject(element) {
-  return Array.from(element.attributes).reduce((acc, attribute) => {
+function attrsToObject(element: Element): Record<string, string> {
+  return Array.from(element.attributes).reduce<Record<string, string>>((acc, attribute) => {
     acc[attribute.name] = attribute.value;
     return acc;
   }, {});
 }
 
-function parseSvgToTree(svgText) {
+function parseSvgToTree(svgText: string): { tree: SvgNode; layers: LayerItem[] } {
   const parser = new DOMParser();
   const doc = parser.parseFromString(svgText, "image/svg+xml");
   const parserError = doc.querySelector("parsererror");
@@ -47,17 +56,17 @@ function parseSvgToTree(svgText) {
   }
 
   let layerCount = 0;
-  const layers = [];
+  const layers: LayerItem[] = [];
 
-  const visit = (element, path) => {
-    const tag = element.tagName.toLowerCase();
+  const visit = (element: Element, path: string): SvgNode | null => {
+    const tag = element.tagName.toLowerCase() as AllowedTag;
     if (!ALLOWED_TAGS.has(tag)) {
       return null;
     }
 
     const attrs = attrsToObject(element);
     const layerId = attrs.id ? `${tag}-${attrs.id}-${path}` : `${tag}-${path}`;
-    const node = {
+    const node: SvgNode = {
       id: layerId,
       tag,
       attrs,
@@ -83,27 +92,29 @@ function parseSvgToTree(svgText) {
     return node;
   };
 
-  return {
-    tree: visit(root, "0"),
-    layers,
-  };
+  const tree = visit(root, "0");
+  if (!tree) {
+    throw new Error("Unsupported SVG structure.");
+  }
+
+  return { tree, layers };
 }
 
 function App() {
-  const [fileName, setFileName] = useState("");
-  const [svgText, setSvgText] = useState("");
-  const [svgTree, setSvgTree] = useState(null);
-  const [layers, setLayers] = useState([]);
-  const [selectedLayerId, setSelectedLayerId] = useState(null);
-  const [preset, setPreset] = useState("fade");
-  const [controls, setControls] = useState(INITIAL_CONTROLS);
-  const [scope, setScope] = useState("all");
-  const [error, setError] = useState("");
-  const [replayToken, setReplayToken] = useState(0);
+  const [fileName, setFileName] = useState<string>("");
+  const [svgText, setSvgText] = useState<string>("");
+  const [svgTree, setSvgTree] = useState<SvgNode | null>(null);
+  const [layers, setLayers] = useState<LayerItem[]>([]);
+  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
+  const [preset, setPreset] = useState<PresetKey>("fade");
+  const [controls, setControls] = useState<AnimationControlsState>(INITIAL_CONTROLS);
+  const [scope, setScope] = useState<ScopeMode>("all");
+  const [error, setError] = useState<string>("");
+  const [replayToken, setReplayToken] = useState<number>(0);
 
   const hasSvg = useMemo(() => Boolean(svgTree), [svgTree]);
 
-  const handleUpload = (payload, uploadError) => {
+  const handleUpload = (payload: UploadPayload | null, uploadError: string | null) => {
     if (uploadError) {
       setError(uploadError);
       return;
@@ -124,7 +135,8 @@ function App() {
       setError("");
       setReplayToken((prev) => prev + 1);
     } catch (parseError) {
-      setError(parseError.message);
+      const message = parseError instanceof Error ? parseError.message : "Could not parse SVG.";
+      setError(message);
       setSvgTree(null);
       setLayers([]);
     }
@@ -166,13 +178,7 @@ function App() {
             onReplay={() => setReplayToken((prev) => prev + 1)}
           />
 
-          <ExportPanel
-            hasSvg={hasSvg}
-            svgText={svgText}
-            preset={preset}
-            controls={controls}
-            scope={scope}
-          />
+          <ExportPanel hasSvg={hasSvg} svgText={svgText} preset={preset} controls={controls} scope={scope} />
         </div>
       </section>
     </main>

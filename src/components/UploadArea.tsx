@@ -1,14 +1,21 @@
 import { useRef, useState } from "react";
+import type { UploadPayload } from "../types";
 
-function UploadArea({ onUpload, fileName, error }) {
+interface UploadAreaProps {
+  onUpload: (payload: UploadPayload | null, error: string | null) => void;
+  fileName: string;
+  error: string;
+}
+
+function UploadArea({ onUpload, fileName, error }: UploadAreaProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const inputRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
-  const readFile = async (file) => {
+  const readFile = async (file: File | undefined) => {
     const isSvg =
       Boolean(file) && (file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg"));
 
-    if (!isSvg) {
+    if (!isSvg || !file) {
       onUpload(null, "Please upload an SVG file.");
       return;
     }
@@ -17,15 +24,15 @@ function UploadArea({ onUpload, fileName, error }) {
     onUpload({ text, fileName: file.name }, null);
   };
 
-  const handleDrop = async (event) => {
+  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setIsDragging(false);
-    const [file] = event.dataTransfer.files;
+    const [file] = Array.from(event.dataTransfer.files);
     await readFile(file);
   };
 
-  const handleInput = async (event) => {
-    const [file] = event.target.files;
+  const handleInput = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const [file] = Array.from(event.target.files || []);
     await readFile(file);
   };
 

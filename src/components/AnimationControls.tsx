@@ -1,4 +1,7 @@
-const PRESETS = [
+import type { Dispatch, SetStateAction } from "react";
+import type { AnimationControlsState, PresetKey, ScopeMode } from "../types";
+
+const PRESETS: Array<{ value: PresetKey; label: string }> = [
   { value: "fade", label: "Fade In" },
   { value: "slide", label: "Slide In" },
   { value: "draw", label: "Draw / Stroke" },
@@ -7,7 +10,16 @@ const PRESETS = [
   { value: "rotate", label: "Rotate In" },
 ];
 
-function ControlRow({ label, value, min, max, step, onChange }) {
+interface ControlRowProps {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (value: number) => void;
+}
+
+function ControlRow({ label, value, min, max, step, onChange }: ControlRowProps) {
   return (
     <label className="block">
       <div className="mb-1 flex items-center justify-between text-xs text-slate-600">
@@ -27,6 +39,18 @@ function ControlRow({ label, value, min, max, step, onChange }) {
   );
 }
 
+interface AnimationControlsProps {
+  hasSvg: boolean;
+  preset: PresetKey;
+  controls: AnimationControlsState;
+  scope: ScopeMode;
+  selectedLayerId: string | null;
+  onChangePreset: (preset: PresetKey) => void;
+  onChangeControls: Dispatch<SetStateAction<AnimationControlsState>>;
+  onChangeScope: (scope: ScopeMode) => void;
+  onReplay: () => void;
+}
+
 function AnimationControls({
   hasSvg,
   preset,
@@ -37,10 +61,10 @@ function AnimationControls({
   onChangeControls,
   onChangeScope,
   onReplay,
-}) {
+}: AnimationControlsProps) {
   const disabled = !hasSvg;
 
-  const updateControls = (partial) => {
+  const updateControls = (partial: Partial<AnimationControlsState>) => {
     onChangeControls((prev) => ({
       ...prev,
       ...partial,
@@ -56,13 +80,13 @@ function AnimationControls({
           Preset
           <select
             value={preset}
-            onChange={(event) => onChangePreset(event.target.value)}
+            onChange={(event) => onChangePreset(event.target.value as PresetKey)}
             disabled={disabled}
             className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-900"
           >
-            {PRESETS.map((preset) => (
-              <option key={preset.value} value={preset.value}>
-                {preset.label}
+            {PRESETS.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
               </option>
             ))}
           </select>
@@ -72,7 +96,7 @@ function AnimationControls({
           Apply To
           <select
             value={scope}
-            onChange={(event) => onChangeScope(event.target.value)}
+            onChange={(event) => onChangeScope(event.target.value as ScopeMode)}
             disabled={disabled}
             className="mt-1 w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm text-slate-900"
           >
